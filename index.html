@@ -7,7 +7,7 @@
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
     body { background: #f4f6f8; color: #333; padding: 20px; display: flex; justify-content: center; }
-    .card { background: #fff; width: 100%; max-width: 420px; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); padding: 24px; }
+    .card { background: #fff; width: 100%; max-width: 440px; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); padding: 24px; }
     h1 { font-size: 1.25rem; font-weight: 700; margin-bottom: 20px; text-align: center; color: #1a202c; }
     
     .form-group { margin-bottom: 18px; }
@@ -22,7 +22,9 @@
     
     .result-box { background: #ebf8ff; border: 1px solid #bee3f8; border-radius: 12px; padding: 18px; margin-top: 20px; text-align: center; }
     .per-person-label { font-size: 0.85rem; color: #2b6cb0; font-weight: 600; }
-    .per-person-val { font-size: 2.1rem; font-weight: 800; color: #2b6cb0; margin: 4px 0; }
+    .per-person-container { margin: 6px 0; display: flex; align-items: baseline; justify-content: center; flex-wrap: wrap; gap: 6px; }
+    .per-person-val { font-size: 1.9rem; font-weight: 800; color: #2b6cb0; }
+    .per-person-exact { font-size: 1.15rem; font-weight: 600; color: #4a5568; }
     
     .details { margin-top: 14px; border-top: 1px dashed #cbd5e0; padding-top: 12px; font-size: 0.85rem; color: #718096; text-align: left; }
     .details-row { display: flex; justify-content: space-between; margin-bottom: 6px; }
@@ -61,8 +63,11 @@
   </div>
 
   <div class="result-box">
-    <div class="per-person-label">1人あたりの支払額（切り上げ）</div>
-    <div class="per-person-val" id="perPersonDisplay">279 MXN</div>
+    <div class="per-person-label">1人あたりの支払額（切り上げ / 正確な額）</div>
+    <div class="per-person-container">
+      <span class="per-person-val" id="perPersonDisplay">279 MXN</span>
+      <span class="per-person-exact" id="perPersonExactDisplay">(279.00 MXN)</span>
+    </div>
 
     <div class="details">
       <div class="details-row"><span>対象基本額:</span><span id="baseAmountDisplay">1,000.00 MXN</span></div>
@@ -95,7 +100,7 @@
     const total = parseFloat(document.getElementById('totalAmount').value) || 0;
     const people = parseInt(document.getElementById('peopleCount').value, 10) || 1;
 
-    // チップ額は常に税込総額基準で計算
+    // チップ額は常に税込総額基準
     const tip = total * (tipPercent / 100);
 
     let baseAmount = 0;
@@ -112,7 +117,7 @@
       document.getElementById('baseAmountDisplay').innerText = baseAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' MXN (本体)';
       document.getElementById('taxDisplay').innerText = '-' + tax.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' MXN';
     } else {
-      // IVA込みモード: 総額 + チップ（通常の割り勘）
+      // IVA込みモード: 総額 + チップ
       baseAmount = total;
       targetTotal = total + tip;
 
@@ -120,13 +125,19 @@
       document.getElementById('baseAmountDisplay').innerText = baseAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' MXN (総額)';
     }
 
-    // 1ペソ単位切り上げ
-    const perPerson = Math.ceil(targetTotal / Math.max(1, people));
+    const rawPerPerson = targetTotal / Math.max(1, people);
+
+    // 1ペソ単位の切り上げ（現金精算向け）
+    const perPersonCeil = Math.ceil(rawPerPerson);
+
+    // 小数点第2位までの切り上げ（電子送金・正確な精算向け）
+    const perPersonExactCeil = (Math.ceil(rawPerPerson * 100) / 100).toFixed(2);
 
     // 画面反映
     document.getElementById('tipDisplay').innerText = tip.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' MXN';
     document.getElementById('targetTotalDisplay').innerText = targetTotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' MXN';
-    document.getElementById('perPersonDisplay').innerText = perPerson.toLocaleString() + ' MXN';
+    document.getElementById('perPersonDisplay').innerText = perPersonCeil.toLocaleString() + ' MXN';
+    document.getElementById('perPersonExactDisplay').innerText = '(' + Number(perPersonExactCeil).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' MXN)';
   }
 
   document.getElementById('totalAmount').addEventListener('input', calculate);
